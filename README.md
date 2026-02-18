@@ -24,54 +24,31 @@ Colors change dynamically based on how close you are to hitting a limit.
 
 | Usage | Color | Meaning |
 |-------|-------|---------|
-| 0 – 69% | $\color{gray}{\textsf{⬤ Gray}}$ | Plenty of room |
-| 70 – 79% | $\color{goldenrod}{\textsf{⬤ Yellow}}$ | Getting warm |
-| 80 – 89% | $\color{orange}{\textsf{⬤ Orange}}$ | Approaching limit |
-| 90 – 100% | $\color{red}{\textsf{⬤ Red}}$ | Near or at limit |
+| 0 – 69% | ⚪ Gray | Plenty of room |
+| 70 – 79% | 🟡 Yellow | Getting warm |
+| 80 – 89% | 🟠 Orange | Approaching limit |
+| 90 – 100% | 🔴 Red | Near or at limit |
 
 ### Smart Color for 5h / 7d Limits
 
-The 5h and 7d segments use **rate-aware coloring**: if your usage percentage is below the elapsed percentage of the window, the color stays $\color{gray}{\textsf{gray}}$ regardless of the absolute number — because your pace is sustainable and won't hit the limit.
+The 5h and 7d segments use **rate-aware coloring**: if your usage percentage is below the elapsed percentage of the window, the color stays gray regardless of the absolute number — because your pace is sustainable and won't hit the limit.
 
-**Example:** 3 hours into a 5-hour window (60% elapsed), using 50% — stays $\color{gray}{\textsf{gray}}$ because 50% < 60%.
+**Example:** 3 hours into a 5-hour window (60% elapsed), using 50% — stays gray because 50% < 60%.
 
 ### Example States
 
-**Everything fine** — low usage across the board:
-
-> $\color{gray}{\textsf{▓▓░░░░░░░░ 22\% · 5h: 8\% (\~4.2h) · 7d: 31\% (\~4.8d)}}$
-
-**Mid-session** — context growing, limits still comfortable:
-
-> $\color{gray}{\textsf{▓▓▓▓░░░░░░ 44\%}}$ $\color{gray}{\textsf{· 5h: 18\% (\~2.3h) · 7d: 45\% (\~3.1d)}}$
-
-**Getting warm** — context window past 70%:
-
-> $\color{goldenrod}{\textsf{▓▓▓▓▓▓▓░░░ 72\%}}$ $\color{gray}{\textsf{· 5h: 35\% (\~1.8h) · 7d: 52\% (\~2.9d)}}$
-
-**Heavy usage** — context high, session limit climbing:
-
-> $\color{orange}{\textsf{▓▓▓▓▓▓▓▓░░ 84\%}}$ $\color{gray}{\textsf{·}}$ $\color{goldenrod}{\textsf{5h: 71\% (\~48m)}}$ $\color{gray}{\textsf{· 7d: 65\% (\~2.1d)}}$
-
-**Critical** — near limits, time to wrap up:
-
-> $\color{red}{\textsf{▓▓▓▓▓▓▓▓▓░ 93\%}}$ $\color{gray}{\textsf{·}}$ $\color{orange}{\textsf{5h: 82\% (\~22m)}}$ $\color{gray}{\textsf{·}}$ $\color{red}{\textsf{7d: 95\% (\~8h)}}$
-
-## Features
-
-- **Context window** — progress bar showing how full your current conversation is
-- **5h session limit** — percentage used with time until reset
-- **7d weekly limit** — percentage used with time until reset
-- **Smart colors** — $\color{gray}{\textsf{gray}}$ → $\color{goldenrod}{\textsf{yellow}}$ → $\color{orange}{\textsf{orange}}$ → $\color{red}{\textsf{red}}$ as limits are approached; stays $\color{gray}{\textsf{gray}}$ if your usage rate is sustainable
-- **API-based** — fetches exact usage data from the Anthropic OAuth API
-- **5min cache** — avoids excessive API calls, shared across all sessions
+| State | Statusline | Colors |
+|-------|-----------|--------|
+| **Everything fine** | `▓▓░░░░░░░░ 22% · 5h: 8% (~4.2h) · 7d: 31% (~4.8d)` | All ⚪ gray |
+| **Mid-session** | `▓▓▓▓░░░░░░ 44% · 5h: 18% (~2.3h) · 7d: 45% (~3.1d)` | All ⚪ gray |
+| **Getting warm** | `▓▓▓▓▓▓▓░░░ 72% · 5h: 35% (~1.8h) · 7d: 52% (~2.9d)` | Context 🟡, rest ⚪ |
+| **Heavy usage** | `▓▓▓▓▓▓▓▓░░ 84% · 5h: 71% (~48m) · 7d: 65% (~2.1d)` | Context 🟠, 5h 🟡, 7d ⚪ |
+| **Critical** | `▓▓▓▓▓▓▓▓▓░ 93% · 5h: 82% (~22m) · 7d: 95% (~8h)` | Context 🔴, 5h 🟠, 7d 🔴 |
 
 ## Installation
 
-### As a Plugin (Recommended)
-
 ```bash
-claude plugin install /path/to/CustomStatusline
+claude plugin install https://github.com/FlineDev/CustomStatusline
 ```
 
 Then run the setup command in Claude Code:
@@ -120,23 +97,7 @@ The **context window** bar uses simple threshold coloring — the percentage dir
 
 The **5h and 7d segments** are smarter. They use **rate-aware coloring** that compares your usage against elapsed time:
 
-> If you've used less of the limit than the time that has passed, your pace is sustainable — the color stays $\color{gray}{\textsf{gray}}$ regardless of the absolute percentage.
+> If you've used less of the limit than the time that has passed, your pace is sustainable — the color stays gray regardless of the absolute percentage.
 
-**Why this matters:** Imagine you're 4 hours into a 5-hour window (80% elapsed) and have used 75%. A naive approach would show $\color{goldenrod}{\textsf{yellow}}$ because 75% ≥ 70%. But you're actually using resources *slower* than they regenerate — you'll never hit the limit at this pace. Smart coloring keeps it $\color{gray}{\textsf{gray}}$.
+**Why this matters:** Imagine you're 4 hours into a 5-hour window (80% elapsed) and have used 75%. A naive approach would show 🟡 yellow because 75% ≥ 70%. But you're actually using resources *slower* than they regenerate — you'll never hit the limit at this pace. Smart coloring keeps it ⚪ gray.
 
-Conversely, if you're only 1 hour in (20% elapsed) but already at 50%, that's an unsustainable rate heading for a wall. Smart coloring shows $\color{goldenrod}{\textsf{yellow}}$ to warn you early, even though 50% alone wouldn't trigger a warning.
-
-### Time Remaining
-
-Each limit shows how long until its rolling window resets, in the most readable unit:
-
-| Remaining | Display |
-|-----------|---------|
-| 24+ hours | `~1.8d` |
-| 1 – 24 hours | `~2.3h` |
-| < 1 hour | `~45m` |
-| Imminent | `now` |
-
-## License
-
-MIT
