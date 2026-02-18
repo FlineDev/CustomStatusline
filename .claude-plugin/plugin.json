@@ -1,0 +1,13 @@
+{
+  "name": "custom-statusline",
+  "version": "1.0.0",
+  "description": "Real-time usage monitoring statusline showing context window, 5h session, and 7d weekly limits",
+  "author": {
+    "name": "Cihat Gündüz",
+    "url": "https://fline.dev"
+  },
+  "homepage": "https://github.com/FlineDev/CustomStatusline",
+  "repository": "https://github.com/FlineDev/CustomStatusline",
+  "license": "MIT",
+  "keywords": ["statusline", "usage", "monitoring", "limits"]
+}
