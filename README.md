@@ -50,8 +50,8 @@ The 5h and 7d segments use **rate-aware coloring**: if your usage percentage is 
 ### Via Marketplace (Recommended)
 
 ```
-/plugin marketplace add https://github.com/FlineDev/Marketplace
-/plugin install custom-statusline@FlineDev
+/plugin marketplace add FlineDev/Marketplace
+/plugin install custom-statusline
 ```
 
 Then run the setup command:
@@ -68,7 +68,11 @@ Then run the setup command:
 
 ```json
 {
-  "statusLine": "bash ~/.claude/custom-statusline.sh"
+  "statusLine": {
+    "type": "command",
+    "command": "bash ~/.claude/custom-statusline.sh",
+    "padding": 0
+  }
 }
 ```
 

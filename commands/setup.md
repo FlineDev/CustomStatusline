@@ -24,7 +24,11 @@ Read the user's Claude settings file at `~/.claude/settings.json`. If the file d
 
 ```json
 {
-  "statusLine": "bash ~/.claude/custom-statusline.sh"
+  "statusLine": {
+    "type": "command",
+    "command": "bash ~/.claude/custom-statusline.sh",
+    "padding": 0
+  }
 }
 ```
 
