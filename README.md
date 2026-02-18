@@ -47,17 +47,20 @@ The 5h and 7d segments use **rate-aware coloring**: if your usage percentage is 
 
 ## Installation
 
-```bash
-claude plugin install https://github.com/FlineDev/CustomStatusline
+### Via Marketplace (Recommended)
+
+```
+/plugin marketplace add https://github.com/FlineDev/Marketplace
+/plugin install custom-statusline@FlineDev
 ```
 
-Then run the setup command in Claude Code:
+Then run the setup command:
 
 ```
 /custom-statusline:setup
 ```
 
-### Manual Installation
+### Manual
 
 1. Copy `scripts/custom-statusline.sh` to `~/.claude/custom-statusline.sh`
 2. Make it executable: `chmod +x ~/.claude/custom-statusline.sh`
@@ -71,9 +74,8 @@ Then run the setup command in Claude Code:
 
 ## Requirements
 
-- `jq` — JSON processor (pre-installed on most systems, or `brew install jq`)
-- `curl` — HTTP client (pre-installed on macOS/Linux)
-- Claude Code with OAuth login (`claude auth login`)
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) with OAuth login (`claude auth login`)
+- `jq` and `curl` (pre-installed on macOS, `brew install jq` on Linux if needed)
 
 ## How It Works
 
