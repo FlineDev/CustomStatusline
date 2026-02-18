@@ -51,9 +51,17 @@ The 5h and 7d segments use **rate-aware coloring**: if your usage percentage is 
 
 Start Claude Code (`claude`), then run these three commands inside it:
 
-1. `/plugin marketplace add FlineDev/Marketplace`
-2. `/plugin install custom-statusline`
-3. `/custom-statusline:setup`
+```
+/plugin marketplace add FlineDev/Marketplace
+```
+
+```
+/plugin install custom-statusline
+```
+
+```
+/custom-statusline:setup
+```
 
 ### Manual
 
