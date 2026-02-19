@@ -227,7 +227,7 @@ if [[ "$CURRENT_USAGE" != "null" && -n "$CURRENT_USAGE" ]]; then
     progress_bar=$(echo "$progress_result" | cut -d'|' -f1)
     text_color=$(echo "$progress_result" | cut -d'|' -f2)
 
-    context_info="${progress_bar} ${text_color}${context_percent}%${LIGHT_GRAY}"
+    context_info="${progress_bar} ${text_color}$(printf "%02d" $context_percent)%${LIGHT_GRAY}"
 else
     context_info="awaiting data"
 fi
@@ -243,10 +243,11 @@ if [[ $api_available -eq 0 ]]; then
     five_hour_time=$(format_time_remaining "$five_hour_resets")
 
     five_hour_color=$(color_for_usage $five_hour_pct "$five_hour_resets" 18000)
+    five_hour_fmt=$(printf "%02d" $five_hour_pct)
     if [[ -n "$five_hour_time" ]]; then
-        window_info="5h: ${five_hour_color}${five_hour_pct}%${LIGHT_GRAY} (${five_hour_time})"
+        window_info="5h: ${five_hour_color}${five_hour_fmt}%${LIGHT_GRAY} (${five_hour_time})"
     else
-        window_info="5h: ${five_hour_color}${five_hour_pct}%${LIGHT_GRAY}"
+        window_info="5h: ${five_hour_color}${five_hour_fmt}%${LIGHT_GRAY}"
     fi
 
     # 7d usage
@@ -255,10 +256,11 @@ if [[ $api_available -eq 0 ]]; then
     seven_day_time=$(format_time_remaining "$seven_day_resets")
 
     seven_day_color=$(color_for_usage $seven_day_pct "$seven_day_resets" 604800)
+    seven_day_fmt=$(printf "%02d" $seven_day_pct)
     if [[ -n "$seven_day_time" ]]; then
-        weekly_info="7d: ${seven_day_color}${seven_day_pct}%${LIGHT_GRAY} (${seven_day_time})"
+        weekly_info="7d: ${seven_day_color}${seven_day_fmt}%${LIGHT_GRAY} (${seven_day_time})"
     else
-        weekly_info="7d: ${seven_day_color}${seven_day_pct}%${LIGHT_GRAY}"
+        weekly_info="7d: ${seven_day_color}${seven_day_fmt}%${LIGHT_GRAY}"
     fi
 else
     # No OAuth token or API unreachable

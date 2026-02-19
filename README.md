@@ -63,6 +63,17 @@ Start Claude Code (`claude`), then run these three commands inside it:
 /custom-statusline:setup
 ```
 
+### Automatic Updates (Optional, Recommended)
+
+By default, third-party plugins don't auto-update. To receive new features and fixes automatically:
+
+1. Type `/plugin` and press Enter
+2. Switch to the **Marketplaces** tab
+3. Navigate to **FlineDev** and press Enter
+4. Press Enter on **Enable auto-update** (it flips to "Disable auto-update" when enabled)
+
+With this enabled, Claude Code checks for plugin updates on startup and notifies you when a new version is available.
+
 ### Manual
 
 1. Copy `scripts/custom-statusline.sh` to `~/.claude/custom-statusline.sh`

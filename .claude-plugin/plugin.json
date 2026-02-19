@@ -1,6 +1,6 @@
 {
   "name": "custom-statusline",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Real-time usage monitoring statusline showing context window, 5h session, and 7d weekly limits",
   "author": {
     "name": "Cihat Gündüz",
