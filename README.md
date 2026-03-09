@@ -1,4 +1,4 @@
-# CustomStatusline
+# 📊 CustomStatusline
 
 A custom statusline for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) that shows real-time usage monitoring.
 
