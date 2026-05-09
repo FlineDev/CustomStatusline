@@ -29,24 +29,6 @@ USAGE_CACHE_MAX_AGE=300  # seconds (5 minutes)
 # Caches response for 5 minutes (shared across all sessions via file).
 # Returns 0 on success, 1 if no token or API error.
 fetch_usage_data() {
-    # Check cache: if file exists and is less than 5 minutes old, use it
-    if [[ -f "$USAGE_CACHE" ]]; then
-        local fetched_at_iso
-        fetched_at_iso=$(jq -r '.fetched_at // ""' "$USAGE_CACHE" 2>/dev/null)
-        local fetched_at_ts=0
-        if [[ -n "$fetched_at_iso" ]]; then
-            fetched_at_ts=$(date -u -j -f "%Y-%m-%dT%H:%M:%SZ" "$fetched_at_iso" +%s 2>/dev/null || date -u -d "$fetched_at_iso" +%s 2>/dev/null || echo 0)
-        fi
-        local now_ts
-        now_ts=$(date +%s)
-        local cache_age=$(( now_ts - fetched_at_ts ))
-
-        if [[ $cache_age -lt $USAGE_CACHE_MAX_AGE ]]; then
-            cat "$USAGE_CACHE"
-            return 0
-        fi
-    fi
-
     # Get OAuth token (macOS Keychain or Linux credentials file)
     local token=""
     if command -v security &>/dev/null; then
@@ -60,6 +42,35 @@ fetch_usage_data() {
         return 1
     fi
 
+    local token_prefix="${token:0:16}"
+
+    # Cache check: token_prefix match BEFORE TTL. After switching Claude accounts the Keychain
+    # token changes but the cache file would still hold the previous account's stats with a
+    # recent fetched_at, so a TTL-only check would serve stale data for up to 5 minutes.
+    local token_mismatch=0
+    if [[ -f "$USAGE_CACHE" ]]; then
+        local cached_prefix
+        cached_prefix=$(jq -r '.token_prefix // ""' "$USAGE_CACHE" 2>/dev/null)
+        if [[ "$cached_prefix" == "$token_prefix" ]]; then
+            local fetched_at_iso
+            fetched_at_iso=$(jq -r '.fetched_at // ""' "$USAGE_CACHE" 2>/dev/null)
+            local fetched_at_ts=0
+            if [[ -n "$fetched_at_iso" ]]; then
+                fetched_at_ts=$(date -u -j -f "%Y-%m-%dT%H:%M:%SZ" "$fetched_at_iso" +%s 2>/dev/null || date -u -d "$fetched_at_iso" +%s 2>/dev/null || echo 0)
+            fi
+            local now_ts
+            now_ts=$(date +%s)
+            local cache_age=$(( now_ts - fetched_at_ts ))
+
+            if [[ $cache_age -lt $USAGE_CACHE_MAX_AGE ]]; then
+                cat "$USAGE_CACHE"
+                return 0
+            fi
+        else
+            token_mismatch=1
+        fi
+    fi
+
     # Call API (3s timeout to avoid blocking the statusline)
     local response
     response=$(curl -s --max-time 3 \
@@ -69,16 +80,16 @@ fetch_usage_data() {
 
     # Validate response contains expected fields
     if echo "$response" | jq -e '.five_hour' &>/dev/null; then
-        # Cache only the fields we need, with fetch timestamp
+        # Cache the fields we need, plus fetch timestamp and token_prefix for account-switch detection
         local now_iso
         now_iso=$(date -u "+%Y-%m-%dT%H:%M:%SZ")
-        echo "$response" | jq --arg ts "$now_iso" '{fetched_at: $ts, five_hour, seven_day}' > "$USAGE_CACHE"
+        echo "$response" | jq --arg ts "$now_iso" --arg tp "$token_prefix" '{fetched_at: $ts, token_prefix: $tp, five_hour, seven_day}' > "$USAGE_CACHE"
         cat "$USAGE_CACHE"
         return 0
     fi
 
-    # API error — use stale cache as fallback if available
-    if [[ -f "$USAGE_CACHE" ]]; then
+    # API error — use stale cache as fallback, but only when it belongs to the current account
+    if [[ -f "$USAGE_CACHE" && $token_mismatch -eq 0 ]]; then
         cat "$USAGE_CACHE"
         return 0
     fi
