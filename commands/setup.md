@@ -40,7 +40,8 @@ Tell the user:
 
 - The custom statusline has been installed successfully.
 - It will appear at the bottom of their Claude Code terminal on the next message.
-- The statusline shows: context window usage (progress bar), 5h session limit, and 7d weekly limit.
-- Colors change from gray → yellow → orange → red as limits are approached.
-- Usage data is fetched from the Anthropic API and cached for 5 minutes.
-- Requires `jq` and `curl` to be installed (they usually are on macOS/Linux).
+- The statusline shows: context usage, the 5h session limit, the 7d weekly limit, the model with its effort level, and the current repository.
+- Colors change from gray → yellow → orange → red as limits are approached; everything else stays dim.
+- All data comes from Claude Code itself — no network calls, no credentials, no cache.
+- Requires `jq`, and Claude Code 2.1 or newer for the usage limits.
+- The context bar fills towards 500k tokens by default. To change that, add `--context-max 200k` (or `1M`, or a plain number) to the command in `~/.claude/settings.json`.
