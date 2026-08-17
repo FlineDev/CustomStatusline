@@ -1,6 +1,6 @@
 {
   "name": "custom-statusline",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Statusline showing context, 5h and 7d limits, model and repository - all from Claude Code's own data, no network calls",
   "author": {
     "name": "Cihat Gündüz",

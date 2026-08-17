@@ -45,3 +45,4 @@ Tell the user:
 - All data comes from Claude Code itself — no network calls, no credentials, no cache.
 - Requires `jq`, and Claude Code 2.1 or newer for the usage limits.
 - The context bar fills towards 500k tokens by default. To change that, add `--context-max 200k` (or `1M`, or a plain number) to the command in `~/.claude/settings.json`.
+- The repository name is shortened to 12 characters, or 8 per level once it is a submodule path. `--name-max 6` narrows that, `--name-max off` turns it off entirely, and `--model-max` does the same for the model name.

@@ -9,6 +9,12 @@
 # Options:
 #   --context-max <tokens>   What a full context bar means. Accepts 500000 or 500k.
 #                            Default 500k. See "the bar" below for why this exists.
+#   --name-max <list>        Characters per path level for the folder, one value per
+#                            depth: "12,8,6" means 12 for a plain name, 8 per level for
+#                            two levels, 6 from three levels on. A single number applies
+#                            to every depth. "off" leaves names untouched.
+#                            Default 12,8,6. Minimum 3.
+#   --model-max <n>          The same for the model name. Default 3, "off" to disable.
 #
 # Everything comes from the JSON Claude Code pipes in on stdin. No network call, no
 # keychain access, no cache file: earlier versions fetched the subscription limits
@@ -30,10 +36,16 @@ export LC_ALL=C LC_NUMERIC=C
 
 # --- options ----------------------------------------------------------------
 CONTEXT_MAX=500000
+NAME_MAX=12,8,6
+MODEL_MAX=3
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --context-max) shift; CONTEXT_MAX="$1" ;;
+    --context-max)   shift; CONTEXT_MAX="$1" ;;
     --context-max=*) CONTEXT_MAX="${1#*=}" ;;
+    --name-max)      shift; NAME_MAX="$1" ;;
+    --name-max=*)    NAME_MAX="${1#*=}" ;;
+    --model-max)     shift; MODEL_MAX="$1" ;;
+    --model-max=*)   MODEL_MAX="${1#*=}" ;;
   esac
   shift
 done
@@ -42,6 +54,32 @@ case "$CONTEXT_MAX" in
   *[mM]) CONTEXT_MAX=$(( ${CONTEXT_MAX%[mM]} * 1000000 )) ;;
 esac
 [[ "$CONTEXT_MAX" =~ ^[0-9]+$ ]] && (( CONTEXT_MAX > 0 )) || CONTEXT_MAX=500000
+
+# Budgets are a comma separated list, one entry per path depth, and the last entry
+# also covers everything deeper. A budget per depth rather than one fixed number is
+# what keeps the LINE narrow instead of only each part: with a single value the width
+# grows with every level, so a three level path stays wide while a plain name is
+# squeezed for no reason. Spending the freed room on the shallow case is the whole
+# point -- most of the time there is only one level.
+#
+# Three is the floor. Below that a name stops being a name: two characters collide
+# across any real set of projects, and one is noise.
+MIN_BUDGET=3
+normalise_budget() {   # $1 = spec -> comma list, or 0 for "off"; fails on nonsense
+  local spec="$1" out="" v IFS=,
+  case "$spec" in
+    off|OFF|Off|none|0) printf '0'; return 0 ;;
+  esac
+  for v in $spec; do
+    [[ "$v" =~ ^[0-9]+$ ]] || return 1
+    (( v < MIN_BUDGET )) && v=$MIN_BUDGET
+    out+="${out:+,}$v"
+  done
+  [[ -n "$out" ]] || return 1
+  printf '%s' "$out"
+}
+NAME_MAX=$(normalise_budget "$NAME_MAX")   || NAME_MAX=12,8,6
+MODEL_MAX=$(normalise_budget "$MODEL_MAX") || MODEL_MAX=3
 
 input=$(cat)
 
@@ -234,8 +272,8 @@ segment_bar() {      # $1 = tokens, $2 = tokens meaning "full", $3 = level 0..3
 }
 
 # --- shortening -------------------------------------------------------------
-# One rule, used for the folder (4 characters per level) and the model name (3).
-# Generic, no per-project table:
+# One rule, used for the folder (--name-max, per depth) and the model name
+# (--model-max). Generic, no per-project table:
 #
 #   already fits    -> unchanged
 #   several words   -> word beginnings, budget shared; a four digit year keeps its
@@ -289,7 +327,19 @@ function shorten(name, mx,   rest,m,parts,t,w,piece,low,n,i,out,budget,each,extr
   for (t=1; t<=m; t++) {
     w=parts[t]
     while (length(w)) {
-      if (match(w, /^[A-Z][a-z]+/) || match(w, /^[A-Z]+/) || match(w, /^[a-z]+/) || match(w, /^[0-9]+/)) {
+      if (match(w, /^[A-Z][a-z]+/)) {
+        piece=substr(w, RSTART, RLENGTH); w=substr(w, RSTART+RLENGTH)
+      } else if (match(w, /^[A-Z]+/)) {
+        piece=substr(w, RSTART, RLENGTH); w=substr(w, RSTART+RLENGTH)
+        # An acronym sitting directly in front of a word: its last capital starts that
+        # word and has to be handed back. XMLParser is XML + Parser, never XMLP + arser
+        # -- which is what a greedy run of capitals produces, and it is unreadable at
+        # every budget. An acronym at the END keeps all its letters (PancakeUI).
+        if (length(piece) > 1 && w ~ /^[a-z]/) {
+          w = substr(piece, length(piece)) w
+          piece = substr(piece, 1, length(piece)-1)
+        }
+      } else if (match(w, /^[a-z]+/) || match(w, /^[0-9]+/)) {
         piece=substr(w, RSTART, RLENGTH); w=substr(w, RSTART+RLENGTH)
       } else { piece=substr(w,1,1); w=substr(w,2) }
       low=tolower(piece)
@@ -321,18 +371,27 @@ function shorten(name, mx,   rest,m,parts,t,w,piece,low,n,i,out,budget,each,extr
   delete words; delete is_year; delete share
   return substr(out,1,mx)
 }
-function shorten_path(name, each,   t,a,i,out) {
-  if (index(name,"/")==0) return shorten(name, each)
-  a=split(name, t, "/")
+# The budget spec is a comma separated list indexed by DEPTH: entry one applies to a
+# plain name, entry two to each level of a two level path, and the last entry covers
+# everything deeper. A budget of zero means "leave it alone".
+function budget_for(spec, depth,   k,a,i) {
+  k = split(spec, a, ",")
+  i = (depth <= k) ? depth : k
+  return a[i] + 0
+}
+function shorten_path(name, spec,   t,a,i,out,bud) {
+  a = split(name, t, "/")
+  bud = budget_for(spec, a)
+  if (bud <= 0) return name
   out=""
-  for (i=1;i<=a;i++) out = out (i>1 ? "/" : "") shorten(t[i], each)
+  for (i=1;i<=a;i++) out = out (i>1 ? "/" : "") shorten(t[i], bud)
   return out
 }
 
-BEGIN{ if (n != "") print shorten_path(n, b+0) }
+BEGIN{ if (n != "") print shorten_path(n, b) }
 AWKPROG
 
-shorten() {          # $1 = name, $2 = budget
+shorten() {          # $1 = name, $2 = budget spec (comma list, or 0 for off)
   # -v MUST come before the program text; after it, awk treats it as a filename, the
   # assignment never happens, and the result is silently empty.
   awk -v n="$1" -v b="$2" "$SHORTEN_AWK" </dev/null 2>/dev/null
@@ -342,19 +401,21 @@ shorten() {          # $1 = name, $2 = budget
 # prefix is only added when the repository name says nothing on its own ("Server",
 # "App", "Core"); for a name that already identifies itself the prefix is just noise.
 GENERIC_NAMES=" server app web client backend frontend core shared ios android tools docs api cli lib ui vapor player "
+#
+# The full path is assembled FIRST and shortened as a whole, so the budget can depend
+# on how many levels there actually are. Shortening each level on its own would have
+# to guess the depth before it is known.
 short_dir() {
-  local repo parent name
+  local repo parent name raw
   repo=$(git -C "${DIR:-.}" rev-parse --show-toplevel 2>/dev/null)
-  if [[ -z "$repo" ]]; then shorten "$(basename "${DIR:-?}")" 4; return; fi
+  if [[ -z "$repo" ]]; then shorten "$(basename "${DIR:-?}")" "$NAME_MAX"; return; fi
   name=$(basename "$repo")
+  raw="$name"
   if [[ "$GENERIC_NAMES" == *" $(printf '%s' "$name" | tr '[:upper:]' '[:lower:]') "* ]]; then
     parent=$(git -C "$repo" rev-parse --show-superproject-working-tree 2>/dev/null)
-    if [[ -n "$parent" ]]; then
-      printf '%s/%s' "$(shorten "$(basename "$parent")" 4)" "$(shorten "$name" 4)"
-      return
-    fi
+    [[ -n "$parent" ]] && raw="$(basename "$parent")/$name"
   fi
-  shorten "$name" 4
+  shorten "$raw" "$NAME_MAX"
 }
 
 # ========== assemble ==========
@@ -396,12 +457,13 @@ window() {           # $1 = percent, $2 = resets_at, $3 = window seconds
 window "$H5_PCT" "$H5_RESET" 18000
 window "$D7_PCT" "$D7_RESET" 604800
 
-# 3 -- model and effort. Three characters from the first word of the display name via
-# the same shortening rule, so it also works for models that do not exist yet. The
-# effort levels are a fixed table rather than a rule: there are exactly five of them,
-# and the rule would turn "medium" into "mdm".
+# 3 -- model and effort. The first word of the display name through the same shortening
+# rule, so it also works for models that do not exist yet. Three characters by default:
+# model names are few and short, and a fourth character adds nothing. The effort levels
+# are a fixed table rather than a rule: there are exactly five of them, and the rule
+# would turn "medium" into "mdm".
 if [[ -n "$MODEL" ]]; then
-  short_model=$(shorten "${MODEL%% *}" 3)
+  short_model=$(shorten "${MODEL%% *}" "$MODEL_MAX")
   if [[ "$THINKING" == "off" ]]; then
     parts+=("${BASE}${GLYPH_MODEL} ${short_model}${RESET} ${YELLOW}(off)${RESET}")
   elif [[ -n "$EFFORT" ]]; then

@@ -4,6 +4,23 @@ All notable changes to this project are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] – 2026-08-17
+
+### Added
+
+- `--name-max` option for the repository name and `--model-max` for the model name. Both accept `off`; anything unparseable falls back to the default, and values below 3 are raised to 3.
+- `--name-max` takes **one budget per path depth**, the last entry covering everything deeper. The new default `12,8,6` gives a plain repository name twelve characters, a two-level path eight per level, and six from three levels on. A single fixed number keeps every part short but lets the whole field grow with each level; shrinking the budget as the path deepens holds it to roughly one width and spends the freed room on the common case, which is a single name.
+- `scripts/tests/test-options.sh`, driving the real script with real stdin — the failure worth catching is not a wrong rule but an option that never reaches it.
+- Invariant tests across every budget from 3 to 14: no path level exceeds its budget, and a larger budget never yields a shorter result.
+
+### Changed
+
+- The repository name gets **12** characters by default instead of 4, so most names now arrive intact. The model name stays at 3.
+
+### Fixed
+
+- An acronym directly in front of a word swallowed that word's first letter: `XMLParser` was split into `XMLP` + `arser` and rendered as `XMLPars` where `XML` + `Parser` was meant. The last capital of a run now goes back to the word it starts. Acronyms at the end of a name are unaffected.
+
 ## [2.0.0] – 2026-08-16
 
 Version 1 was written when Claude Code did not yet pass usage limits to a statusline, so it fetched them from Anthropic's OAuth API and cached the answer. Claude Code passes them now. Everything the statusline shows comes from its stdin, and the whole network layer is gone.
