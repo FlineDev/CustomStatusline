@@ -5,7 +5,7 @@ A custom statusline for [Claude Code](https://docs.anthropic.com/en/docs/claude-
 ## Preview
 
 ```
-▰▰▱▱▱ 22%  ◑ 38% (2.5h)  ◔ 31% (4.4d)  ✱ Ops (xhi) · #TePo
+▰▰▱▱▱ 22%  ◑ 38% (2.5h)  ◔ 31% (4.4d)  ✱ Ops (xhi) · #TeaPot
 ```
 
 | Part | Shows |
@@ -14,7 +14,7 @@ A custom statusline for [Claude Code](https://docs.anthropic.com/en/docs/claude-
 | `◑ 38% (2.5h)` | 5-hour session limit, with the time until it resets |
 | `◔ 31% (4.4d)` | 7-day weekly limit, with the time until it resets |
 | `✱ Ops (xhi)` | Model and reasoning effort |
-| `#TePo` | Current repository, shortened |
+| `#TeaPot` | Current repository, shortened |
 
 Both usage windows share the same filling circle. The reset time tells them apart: hours for the session window, days for the weekly one.
 
@@ -63,21 +63,27 @@ If you're in an active session, run `/reload-plugins` to activate immediately. C
 
 ## Configuration
 
-There is one option, and it decides what a full context bar means.
+Options go straight into the command:
 
 ```json
 {
   "statusLine": {
     "type": "command",
-    "command": "bash ~/.claude/custom-statusline.sh --context-max 500k",
+    "command": "bash ~/.claude/custom-statusline.sh --context-max 500k --name-max 12,8,6",
     "padding": 0
   }
 }
 ```
 
-`--context-max` accepts `500000`, `500k` or `1M`. **The default is 500k.**
+| Option | Default | Accepts |
+|--------|---------|---------|
+| `--context-max` | `500k` | `500000`, `500k`, `1M` — what a full context bar means |
+| `--name-max` | `12,8,6` | Characters per path level: one value per depth, a single value for all depths, or `off` |
+| `--model-max` | `3` | A single value, or `off` |
 
-### Why this exists
+Anything that is not a number falls back to the default instead of breaking the line, and values below **3** are raised to 3 — at two characters names start colliding, and at one there is nothing left to recognize.
+
+### Why the context bar has its own threshold
 
 A one-million-token context window does not become uncomfortable at 900,000 tokens. It becomes slow and expensive long before that — and a bar that fills against the window size stays half empty while the conversation is already too heavy to work with.
 
@@ -137,16 +143,31 @@ Five states — `○ ◔ ◑ ◕ ●` — rounded to the nearest quarter: empty 
 
 ### Shortened names
 
-The folder gets four characters per path level, the model name three. One rule, no lookup table:
+One rule, no lookup table:
 
 - If the name already fits, it stays.
 - Several words share the budget by their beginnings, and a four-digit year keeps its last two digits: `WaffleKit` → `WaKi`, `Moonshot2029` → `Mo29`.
+- An acronym in front of a word hands its last capital back, because that letter starts the word: `XMLParser` is `XML` + `Parser`, never `XMLP` + `arser`.
 - A single word drops vowels from the right, then undoubles a repeated consonant: `Server` → `Srvr`, `Sonnet` → `Snt`, `Pancake` → `Pnck`.
 - If that still does not fit, it falls back to a plain prefix: `Strawberry` → `Stra`, because `Strwbrry` does not fit either and a half stripped remainder is unreadable.
 
 Working from the right keeps the beginning of the word intact, and the beginning is what carries recognition.
 
-When the current repository is a git submodule whose own name says nothing — `Server`, `App`, `Core` and similar — the parent repository is prefixed: `Umbrella/Server` becomes `Umbr/Srvr`. Names that identify themselves are left alone.
+When the current repository is a git submodule whose own name says nothing — `Server`, `App`, `Core` and similar — the parent repository is prefixed. Names that identify themselves are left alone.
+
+### One budget per depth
+
+`--name-max` takes a list, one entry per path level, and the last entry covers everything deeper. `12,8,6` means twelve characters for a plain name, eight per level once there are two, six from three levels on.
+
+| Name | `12,8,6` | `4` (one value everywhere) |
+|------|----------|---------------------------|
+| `Gingerbread` | `Gingerbread` | `Ging` |
+| `Umbrella/Server` | `Umbrella/Server` | `Umbr/Srvr` |
+| `Umbrella/Tools/PancakeConverter` | `Umbrll/Tools/PanCon` | `Umbr/Tols/PaCo` |
+
+A single fixed number keeps every *part* short but lets the *line* grow with each level — so a three-level path stays wide while a plain name is squeezed for no reason. Shrinking the budget as the path deepens holds the whole field to roughly the same width and spends the room it frees on the common case, which is a single name.
+
+`off` leaves names exactly as they are.
 
 ## Requirements
 
@@ -158,10 +179,13 @@ When the current repository is a git submodule whose own name says nothing — `
 ## Tests
 
 ```bash
-bash scripts/tests/test-shorten.sh
+bash scripts/tests/test-shorten.sh    # the shortening rule, 45 cases
+bash scripts/tests/test-options.sh    # the options, driving the real script end to end
 ```
 
-The tests extract the shortening program from `custom-statusline.sh` itself, so they cannot drift away from what ships.
+`test-shorten.sh` extracts the shortening program from `custom-statusline.sh` itself, so it cannot drift away from what ships. It also checks two properties no single example can prove: no path level ever exceeds its budget, and a larger budget never produces a shorter result.
+
+`test-options.sh` pipes real stdin into the real script, because the interesting failure is not the rule but an option that never reaches it.
 
 ## License
 
